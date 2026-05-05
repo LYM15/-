@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提醒管理 - 极简记账助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 space-y-2">
+        {% for category, message in messages %}
+        <div class="px-6 py-3 rounded-lg shadow-lg text-white {% if category == 'success' %}bg-green-500{% elif category == 'error' %}bg-red-500{% else %}bg-blue-500{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+                <h1 class="text-xl font-bold text-gray-800">💰 极简记账助手</h1>
+                <div class="flex flex-wrap gap-2 sm:gap-4">
+                    <a href="/" class="text-gray-600 hover:text-gray-800">记账</a>
+                    <a href="/records" class="text-gray-600 hover:text-gray-800">流水</a>
+                    <a href="/calendar" class="text-gray-600 hover:text-gray-800">日历</a>
+                    <a href="/stats" class="text-gray-600 hover:text-gray-800">统计</a>
+                    <a href="/challenges" class="text-gray-600 hover:text-gray-800">挑战</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-700 mb-4">添加新提醒</h2>
+            <form action="/reminders" method="POST" class="space-y-4">
+                <input type="hidden" name="action" value="add">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">提醒类型</label>
+                        <select name="type" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]">
+                            <option value="monthly">每月</option>
+                            <option value="weekly">每周</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">日期/星期</label>
+                        <select name="day_of_month"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]">
+                            <option value="">选择日期</option>
+                            {% for d in range(1, 32) %}
+                            <option value="{{ d }}">{{ d }}日</option>
+                            {% endfor %}
+                        </select>
+                        <select name="weekday" class="hidden w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]">
+                            <option value="">选择星期</option>
+                            <option value="0">周一</option>
+                            <option value="1">周二</option>
+                            <option value="2">周三</option>
+                            <option value="3">周四</option>
+                            <option value="4">周五</option>
+                            <option value="5">周六</option>
+                            <option value="6">周日</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">分类</label>
+                        <select name="category" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]">
+                            {% for cat_name, icon, color in categories %}
+                            <option value="{{ cat_name }}">{{ icon }} {{ cat_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">金额</label>
+                        <input type="number" name="amount" step="0.01" min="0.01" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+                            placeholder="0.00">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+                    <input type="text" name="note"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+                        placeholder="可选备注">
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="is_active" id="is_active" checked
+                        class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                    <label for="is_active" class="ml-2 text-sm text-gray-700">立即启用</label>
+                </div>
+                <button type="submit"
+                    class="w-full sm:w-auto bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium min-h-[44px]">
+                    添加提醒
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold text-gray-700 mb-4">我的提醒</h2>
+            {% if reminders %}
+            <div class="space-y-4">
+                {% for reminder in reminders %}
+                <div class="flex items-center justify-between p-4 border rounded-lg {% if not reminder.is_active %}bg-gray-50 opacity-60{% endif %}">
+                    <div>
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-800">{{ reminder.category }}</span>
+                            <span class="ml-2 px-2 py-0.5 text-xs rounded {% if reminder.type == 'monthly' %}bg-blue-100 text-blue-700{% else %}bg-green-100 text-green-700{% endif %}">
+                                {{ '每月' if reminder.type == 'monthly' else '每周' }}
+                            </span>
+                            {% if not reminder.is_active %}
+                            <span class="ml-2 px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-600">已禁用</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1">
+                            {% if reminder.type == 'monthly' %}
+                            {{ reminder.day_of_month }}日
+                            {% else %}
+                            {% set weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'] %}
+                            {{ weekdays[reminder.weekday] if reminder.weekday is not none else '未设置' }}
+                            {% endif %}
+                            - ¥{{ "%.2f"|format(reminder.amount) }}
+                            {% if reminder.note %} - {{ reminder.note }}{% endif %}
+                        </p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <form action="/reminders" method="POST" class="inline">
+                            <input type="hidden" name="action" value="toggle">
+                            <input type="hidden" name="reminder_id" value="{{ reminder.id }}">
+                            <button type="submit" class="px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300">
+                                {{ '启用' if not reminder.is_active else '禁用' }}
+                            </button>
+                        </form>
+                        <form action="/reminders" method="POST" class="inline"
+                            onsubmit="return confirm('确定删除这个提醒吗？');">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="reminder_id" value="{{ reminder.id }}">
+                            <button type="submit" class="px-3 py-1 text-sm bg-red-100 text-red-600 rounded hover:bg-red-200">删除</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-center text-gray-500 py-8">暂无提醒</p>
+            {% endif %}
+        </div>
+
+        <div class="mt-6 text-center">
+            <a href="/" class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm">
+                返回首页
+            </a>
+        </div>
+    </main>
+
+    <script>
+        document.querySelector('select[name="type"]').addEventListener('change', function() {
+            const daySelect = document.querySelector('select[name="day_of_month"]');
+            const weekdaySelect = document.querySelector('select[name="weekday"]');
+            if (this.value === 'monthly') {
+                daySelect.classList.remove('hidden');
+                weekdaySelect.classList.add('hidden');
+            } else {
+                daySelect.classList.add('hidden');
+                weekdaySelect.classList.remove('hidden');
+            }
+        });
+
+        window.setTimeout(function() {
+            var toastContainer = document.getElementById('toast-container');
+            if (toastContainer) {
+                toastContainer.style.opacity = '0';
+                toastContainer.style.transition = 'opacity 0.5s';
+                setTimeout(function() {
+                    toastContainer.remove();
+                }, 500);
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

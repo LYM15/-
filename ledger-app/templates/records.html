@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>记账流水 - 极简记账助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 space-y-2">
+        {% for category, message in messages %}
+        <div class="px-6 py-3 rounded-lg shadow-lg text-white {% if category == 'success' %}bg-green-500{% elif category == 'error' %}bg-red-500{% else %}bg-blue-500{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+                <h1 class="text-xl font-bold text-gray-800">💰 极简记账助手</h1>
+                <div class="flex flex-wrap gap-2 sm:gap-4">
+                    <a href="/" class="text-gray-600 hover:text-gray-800">记账</a>
+                    <a href="/records" class="text-blue-600 hover:text-blue-800 font-medium">流水</a>
+                    <a href="/calendar" class="text-gray-600 hover:text-gray-800">日历</a>
+                    <a href="/stats" class="text-gray-600 hover:text-gray-800">统计</a>
+                    <a href="/challenges" class="text-gray-600 hover:text-gray-800">挑战</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                <span class="text-sm text-gray-600">预算使用</span>
+                <span class="text-sm font-medium {{ 'text-green-600' if stats.budget_percentage < 80 else ('text-orange-500' if stats.budget_percentage < 100 else 'text-red-600') }}">
+                    已使用 {{ "%.1f"|format(stats.budget_percentage) }}% 的月度预算
+                </span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="h-2 rounded-full transition-all {{ 'bg-green-500' if stats.budget_percentage < 80 else ('bg-orange-500' if stats.budget_percentage < 100 else 'bg-red-500') }}"
+                    style="width: {{ stats.budget_percentage if stats.budget_percentage < 100 else 100 }}%"></div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-700 mb-4">快捷日期筛选</h2>
+            <div class="flex flex-wrap gap-2 mb-4">
+                <a href="/records?range=all&filter={{ filter_type }}"
+                    class="px-4 py-2 rounded-md text-sm font-medium {{ 'bg-blue-600 text-white' if date_range == 'all' else 'bg-gray-200 text-gray-700 hover:bg-gray-300' }} min-h-[44px] flex items-center">
+                    全部
+                </a>
+                <a href="/records?range=today&filter={{ filter_type }}"
+                    class="px-4 py-2 rounded-md text-sm font-medium {{ 'bg-blue-600 text-white' if date_range == 'today' else 'bg-gray-200 text-gray-700 hover:bg-gray-300' }} min-h-[44px] flex items-center">
+                    今天
+                </a>
+                <a href="/records?range=week&filter={{ filter_type }}"
+                    class="px-4 py-2 rounded-md text-sm font-medium {{ 'bg-blue-600 text-white' if date_range == 'week' else 'bg-gray-200 text-gray-700 hover:bg-gray-300' }} min-h-[44px] flex items-center">
+                    本周
+                </a>
+                <a href="/records?range=month&filter={{ filter_type }}"
+                    class="px-4 py-2 rounded-md text-sm font-medium {{ 'bg-blue-600 text-white' if date_range == 'month' else 'bg-gray-200 text-gray-700 hover:bg-gray-300' }} min-h-[44px] flex items-center">
+                    本月
+                </a>
+                <a href="/records?range=last_month&filter={{ filter_type }}"
+                    class="px-4 py-2 rounded-md text-sm font-medium {{ 'bg-blue-600 text-white' if date_range == 'last_month' else 'bg-gray-200 text-gray-700 hover:bg-gray-300' }} min-h-[44px] flex items-center">
+                    上月
+                </a>
+            </div>
+
+            <h2 class="text-lg font-semibold text-gray-700 mb-4">搜索过滤</h2>
+            <form action="/records" method="GET" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">备注搜索</label>
+                        <input type="text" name="search" value="{{ search }}"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+                            placeholder="输入备注关键词">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">金额范围</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="number" name="min" value="{{ min_amount if min_amount else '' }}" step="0.01" min="0"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+                                placeholder="最小">
+                            <span class="text-gray-500">-</span>
+                            <input type="number" name="max" value="{{ max_amount if max_amount else '' }}" step="0.01" min="0"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+                                placeholder="最大">
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <a href="/records"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm min-h-[44px] flex items-center">
+                        重置
+                    </a>
+                    <button type="submit"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm min-h-[44px] flex items-center">
+                        搜索
+                    </button>
+                </div>
+                <input type="hidden" name="range" value="{{ date_range }}">
+                <input type="hidden" name="filter" value="{{ filter_type }}">
+            </form>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-4 sm:p-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                <h2 class="text-lg font-semibold text-gray-700">记账流水</h2>
+                <div class="flex flex-wrap space-x-2">
+                    <a href="/records?range={{ date_range }}&filter=all{% if search %}&search={{ search }}{% endif %}{% if min_amount %}&min={{ min_amount }}{% endif %}{% if max_amount %}&max={{ max_amount }}{% endif %}"
+                        class="px-4 py-2 rounded-md text-sm font-medium {{ 'bg-blue-600 text-white' if filter_type == 'all' else 'bg-gray-200 text-gray-700 hover:bg-gray-300' }} min-h-[44px] flex items-center">
+                        全部
+                    </a>
+                    <a href="/records?range={{ date_range }}&filter=expense{% if search %}&search={{ search }}{% endif %}{% if min_amount %}&min={{ min_amount }}{% endif %}{% if max_amount %}&max={{ max_amount }}{% endif %}"
+                        class="px-4 py-2 rounded-md text-sm font-medium {{ 'bg-red-600 text-white' if filter_type == 'expense' else 'bg-gray-200 text-gray-700 hover:bg-gray-300' }} min-h-[44px] flex items-center">
+                        只看支出
+                    </a>
+                    <a href="/records?range={{ date_range }}&filter=income{% if search %}&search={{ search }}{% endif %}{% if min_amount %}&min={{ min_amount }}{% endif %}{% if max_amount %}&max={{ max_amount }}{% endif %}"
+                        class="px-4 py-2 rounded-md text-sm font-medium {{ 'bg-green-600 text-white' if filter_type == 'income' else 'bg-gray-200 text-gray-700 hover:bg-gray-300' }} min-h-[44px] flex items-center">
+                        只看收入
+                    </a>
+                </div>
+            </div>
+
+            {% if records %}
+            <div class="hidden sm:block overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-3 px-2 text-sm font-medium text-gray-600">日期</th>
+                            <th class="text-left py-3 px-2 text-sm font-medium text-gray-600">分类</th>
+                            <th class="text-left py-3 px-2 text-sm font-medium text-gray-600">备注</th>
+                            <th class="text-right py-3 px-2 text-sm font-medium text-gray-600">金额</th>
+                            <th class="text-center py-3 px-2 text-sm font-medium text-gray-600">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr class="border-b border-gray-100 hover:bg-gray-50">
+                            <td class="py-3 px-2 text-sm text-gray-800">{{ record.date.strftime('%Y-%m-%d') }}</td>
+                            <td class="py-3 px-2 text-sm text-gray-800">{{ record.category }}</td>
+                            <td class="py-3 px-2 text-sm text-gray-600">{{ record.note or '-' }}</td>
+                            <td class="py-3 px-2 text-sm text-right font-medium {{ 'text-red-600' if record.type == 'expense' else 'text-green-600' }}">
+                                {{ '-' if record.type == 'expense' else '+' }}{{ "%.2f"|format(record.amount) }}
+                            </td>
+                            <td class="py-3 px-2 text-center">
+                                <a href="/edit_record/{{ record.id }}"
+                                    class="text-blue-600 hover:text-blue-800 text-sm mr-3 min-h-[44px] inline-flex items-center">编辑</a>
+                                <form action="/delete_record/{{ record.id }}" method="POST" class="inline"
+                                    onsubmit="return confirm('确定删除这条记录吗？');">
+                                    <button type="submit"
+                                        class="text-red-600 hover:text-red-800 text-sm min-h-[44px] inline-flex items-center">删除</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sm:hidden space-y-3">
+                {% for record in records %}
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <span class="text-sm text-gray-500">{{ record.date.strftime('%Y-%m-%d') }}</span>
+                            <span class="ml-2 text-sm font-medium text-gray-800">{{ record.category }}</span>
+                        </div>
+                        <span class="text-lg font-bold {{ 'text-red-600' if record.type == 'expense' else 'text-green-600' }}">
+                            {{ '-' if record.type == 'expense' else '+' }}{{ "%.2f"|format(record.amount) }}
+                        </span>
+                    </div>
+                    {% if record.note %}
+                    <p class="text-sm text-gray-600 mb-3">{{ record.note }}</p>
+                    {% endif %}
+                    <div class="flex justify-end space-x-2">
+                        <a href="/edit_record/{{ record.id }}"
+                            class="px-4 py-2 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200 transition-colors text-sm min-h-[44px] flex items-center">编辑</a>
+                        <form action="/delete_record/{{ record.id }}" method="POST" class="inline"
+                            onsubmit="return confirm('确定删除这条记录吗？');">
+                            <button type="submit"
+                                class="px-4 py-2 bg-red-100 text-red-600 rounded-md hover:bg-red-200 transition-colors text-sm min-h-[44px] flex items-center">删除</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <p class="text-lg mb-2">暂无记录</p>
+                <a href="/" class="text-blue-600 hover:text-blue-800">去记一笔</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mt-6 text-center flex flex-wrap justify-center gap-3">
+            <a href="/export_csv"
+                class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm min-h-[44px]">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                导出CSV
+            </a>
+            <a href="/backup"
+                class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm min-h-[44px]">
+                💾 备份数据
+            </a>
+            <a href="/restore"
+                class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm min-h-[44px]">
+                📤 恢复数据
+            </a>
+        </div>
+    </main>
+
+    <script>
+        window.setTimeout(function() {
+            var toastContainer = document.getElementById('toast-container');
+            if (toastContainer) {
+                toastContainer.style.opacity = '0';
+                toastContainer.style.transition = 'opacity 0.5s';
+                setTimeout(function() {
+                    toastContainer.remove();
+                }, 500);
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

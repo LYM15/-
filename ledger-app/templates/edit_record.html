@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编辑记录 - 极简记账助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 space-y-2">
+        {% for category, message in messages %}
+        <div class="px-6 py-3 rounded-lg shadow-lg text-white {% if category == 'success' %}bg-green-500{% elif category == 'error' %}bg-red-500{% else %}bg-blue-500{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+                <h1 class="text-xl font-bold text-gray-800">💰 极简记账助手</h1>
+                <div class="flex flex-wrap gap-2 sm:gap-4">
+                    <a href="/" class="text-gray-600 hover:text-gray-800">记账</a>
+                    <a href="/records" class="text-blue-600 hover:text-blue-800 font-medium">流水</a>
+                    <a href="/calendar" class="text-gray-600 hover:text-gray-800">日历</a>
+                    <a href="/stats" class="text-gray-600 hover:text-gray-800">统计</a>
+                    <a href="/challenges" class="text-gray-600 hover:text-gray-800">挑战</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-md mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold text-gray-700 mb-4">编辑记录</h2>
+            <form action="/update_record/{{ record.id }}" method="POST" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">金额</label>
+                    <input type="number" name="amount" step="0.01" min="0.01" value="{{ record.amount }}" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">类型</label>
+                    <div class="flex space-x-4">
+                        <label class="flex items-center">
+                            <input type="radio" name="type" value="expense" required
+                                {{ 'checked' if record.type == 'expense' else '' }}
+                                class="w-4 h-4 text-red-600 focus:ring-red-500">
+                            <span class="ml-2 text-gray-700">支出</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="type" value="income"
+                                {{ 'checked' if record.type == 'income' else '' }}
+                                class="w-4 h-4 text-green-600 focus:ring-green-500">
+                            <span class="ml-2 text-gray-700">收入</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">分类</label>
+                    <select name="category" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]">
+                        {% for cat_name, icon, color in categories %}
+                        <option value="{{ cat_name }}" {{ 'selected' if cat_name == record.category else '' }}>{{ icon }} {{ cat_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+                    <input type="text" name="note" value="{{ record.note or '' }}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+                        placeholder="可选备注">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">日期</label>
+                    <input type="date" name="date" required value="{{ record.date.strftime('%Y-%m-%d') }}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]">
+                </div>
+
+                <div class="flex space-x-3">
+                    <a href="/records"
+                        class="flex-1 bg-gray-200 text-gray-700 py-3 px-4 rounded-md hover:bg-gray-300 transition-colors text-center font-medium min-h-[44px] flex items-center justify-center">
+                        取消
+                    </a>
+                    <button type="submit"
+                        class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium min-h-[44px]">
+                        保存修改
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="mt-6 text-center flex flex-wrap justify-center gap-3">
+            <a href="/export_csv"
+                class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm min-h-[44px]">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                导出CSV
+            </a>
+            <a href="/backup"
+                class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm min-h-[44px]">
+                💾 备份
+            </a>
+        </div>
+    </main>
+
+    <script>
+        window.setTimeout(function() {
+            var toastContainer = document.getElementById('toast-container');
+            if (toastContainer) {
+                toastContainer.style.opacity = '0';
+                toastContainer.style.transition = 'opacity 0.5s';
+                setTimeout(function() {
+                    toastContainer.remove();
+                }, 500);
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

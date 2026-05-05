@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>恢复数据 - 极简记账助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 space-y-2">
+        {% for category, message in messages %}
+        <div class="px-6 py-3 rounded-lg shadow-lg text-white {% if category == 'success' %}bg-green-500{% elif category == 'error' %}bg-red-500{% else %}bg-blue-500{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+                <h1 class="text-xl font-bold text-gray-800">💰 极简记账助手</h1>
+                <div class="flex flex-wrap gap-2 sm:gap-4">
+                    <a href="/" class="text-gray-600 hover:text-gray-800">记账</a>
+                    <a href="/records" class="text-gray-600 hover:text-gray-800">流水</a>
+                    <a href="/calendar" class="text-gray-600 hover:text-gray-800">日历</a>
+                    <a href="/stats" class="text-gray-600 hover:text-gray-800">统计</a>
+                    <a href="/challenges" class="text-gray-600 hover:text-gray-800">挑战</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-md mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="text-center mb-6">
+                <div class="text-5xl mb-4">📤</div>
+                <h2 class="text-xl font-bold text-gray-800">恢复数据</h2>
+                <p class="text-gray-600 mt-2">从备份文件恢复所有数据</p>
+            </div>
+
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <p class="text-sm text-yellow-700">
+                    ⚠️ 警告：恢复数据将覆盖当前所有数据！<br>
+                    请确保已备份当前数据，或在恢复前导出CSV进行备份。
+                </p>
+            </div>
+
+            <form action="/restore" method="POST" enctype="multipart/form-data" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">选择备份文件</label>
+                    <input type="file" name="file" accept=".json" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]">
+                </div>
+                <button type="submit"
+                    class="w-full bg-red-600 text-white py-3 px-4 rounded-md hover:bg-red-700 transition-colors font-medium min-h-[44px]">
+                    恢复数据
+                </button>
+            </form>
+        </div>
+
+        <div class="mt-6 text-center">
+            <a href="/" class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm">
+                返回首页
+            </a>
+        </div>
+    </main>
+
+    <script>
+        window.setTimeout(function() {
+            var toastContainer = document.getElementById('toast-container');
+            if (toastContainer) {
+                toastContainer.style.opacity = '0';
+                toastContainer.style.transition = 'opacity 0.5s';
+                setTimeout(function() {
+                    toastContainer.remove();
+                }, 500);
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
